@@ -4,9 +4,9 @@
 
 ## 基本資料
 
-**學號：** B11xxxxxx  
-**系級：** 資管系大一  
-**姓名：** 王小明  
+**學號：** B11208058
+**系級：** 資管系大三 
+**姓名：** 沈晨利
 
 ---
 
@@ -16,20 +16,20 @@
 
 | 原始變數名稱 | 代表意義 (Business Logic) | 建議修正名稱 |
 |---|---|---|
-| l1 (in load_proc) | 檔案或資料來源讀入後的資料列集合（list of records/lines） | loaded_lines 或 records |
-| d2 (in main) | 主程式保存的資料物件（單筆或整批資料的 dict/list），供後續處理使用 | main_data 或 dataset |
-| c_res (in check) | 檢查/驗證函式的回傳結果（通常為 bool 或錯誤/合格訊息） | check_result 或 validation_result |
+| l1 | 讀取的原始檔案內容行列表| lines |
+| d2 | 儲存圖書資料的記憶體清單 | books |
+| c_res | 檢查 ISBN 是否已存在於資料庫的檢查函數 | check_isbn_exists |
 
 ### 1.2 壞味道 (Code Smells) 診斷
 
 請列出原程式碼中至少 5 個嚴重的設計問題，並說明為什麼不好：
 
-- **Q1：難懂的變數名稱（如 l1, d2, c_res）** — 造成可讀性差、維護者難以理解變數用途與資料型態。  
-- **Q2：大型函式/複合責任（Single Function 做太多事）** — 測試與重構困難，違反單一職責原則。  
-- **Q3：缺乏輸入/錯誤處理 (no error handling)** — 遇到壞資料或 I/O 例外容易崩潰，缺乏恢復策略。  
-- **Q4：缺少文件與型別資訊（no docstrings/type hints）** — 無法快速知道函式的輸入/輸出型態與前置條件。  
-- **Q5：隱性全域狀態或副作用（global state / mutating inputs）** — 測試困難且容易產生難追蹤的 bug。  
-- **Q6：重複程式碼 / 魔數（duplicated code / magic numbers）** — 維護成本高，修改時容易遺漏更新。
+- **Q1：全局變數使用 (books): 使用全域變數導致資料狀態不透明，若程式規模擴大，函數間的副作用將難以追蹤。**
+- **Q2：檔案操作缺乏上下文管理: 直接使用 open() 與 close() 若發生例外，檔案控制代碼 (file handle) 可能無法正常釋放。**  
+- **Q3：魔法字串 (Magic Strings/Separators): @@ 與 ## 等分隔符直接散落在邏輯中，未來若資料格式改變，必須在多處修改，極易出錯。** 
+- **Q4：責任過載 (God Function): main() 函數包辦了輸入讀取、指令解析、資料處理與存儲，違反了單一職責原則。**  
+- **Q5：缺乏例外處理 (Robustness): 若 lib_data.txt 內容格式不正確，p[1].split("##") 將觸發 IndexError 導致程式崩潰** 
+- **Q6：資料結構模糊: 直接使用字典 {'t': ..., 'i': ..., 's': ...} 存取屬性，缺乏明確的資料定義，開發者難以得知欄位實際含義（容易打錯字）。**
 
 ---
 
@@ -53,18 +53,34 @@ Prompt A：
 |---|---|---|
 
 Prompt B： 
+1. 目標： 撰寫 `modern_library.py`。
+
+    - 模組化： 將功能拆解為類別 (Class) 或多個函式 (Function)。
+
+    - 格式升級： 捨棄原本的 `txt` 混亂分割格式，改用標準 `json` 格式儲存。
+
+    - 強健性： 增加對使用者輸入與檔案讀取的錯誤處理 (Try-Except)。
+
+    - 優化： 修正原程式每次新增資料都要開啟磁碟寫入的低效率行為。
+
+並根據代碼壞味道 (Code Smells) 診斷來更改代碼
 
 Prompt C：
+目標：優化 `modern_library.py` 的指令解析 (Parsing) 與防呆機制。
+目前問題：當使用者輸入格式稍微錯誤（例如 `add/tsdsa`，指令與資料間忘記加空白鍵）時，系統會直接將整串視為未知指令並跳出 `Unknown Command`，缺乏明確的除錯指引。
+要求：請修改 `main()` 迴圈中的字串切割與條件判斷邏輯。當指令缺少必要參數、或分隔符號使用錯誤時，請正確攔截，並印出具體的提示訊息（例如：`Format Error: Please provide Title/ISBN/Status`），以提升系統的容錯性與整體使用者體驗。
 ```
 
 ### 2.2 AI 錯誤處理
 
 1. AI 在撰寫過程中是否有出錯？（例如：漏寫了某個功能、語法錯誤）你是如何發現並請它修正的？
+>回答： 有的。在 AI 產出的 modern_library.py 中，雖然沒有致命的語法錯誤，但在「使用者輸入解析（Parsing）」的邏輯上設計得過於死板。我是透過在終端機實際執行並進行邊界測試（Edge Case Testing）時，發現當輸入格式稍微偏離時（忘記加空白），程式無法給出有用的防呆提示。我直接將終端機的錯誤回饋（Unknown Command）複製貼上詢問 AI，請它解釋並協助排除。
 
 2. 發現的問題： (範例：AI 漏掉了 exit 時要印出分類統計的功能)
+>程式碼中使用 op = input("> ").strip().split(" ", 1) 來切割指令。這導致當我輸入 add/tsdsa（指令 add 與參數之間沒有加空白鍵）時，程式會把整串字串誤認為是一個未知的指令，直接掉入 Unknown Command 的分支，而沒有觸發預期中的 Format Error: Please provide Title/ISBN/Status 防呆提示，造成使用者體驗不佳。
 
 3. 修正的對話： (範例：我告訴它「請在結束前迴圈遍歷 JSON 資料並計算分類總額」)
-
+>AI（修正與指引）： AI 點出了問題癥結在於「指令和資料之間少了一個空白鍵」。程式是利用空白鍵來拆分指令與參數的。AI 隨後提供了明確的修正指引，告訴我必須遵循 add 書名/ISBN/狀態 的格式（例如加上空白：add 深入淺出Python/978001/available），最終成功解決了指令無法識別的問題。
 ---
 
 ## 三、 成果驗證與測試  (共2小題，每小題10分，總共20分)
@@ -76,7 +92,23 @@ Prompt C：
 請貼上執行程式並輸入 show 後，顯示資料清單。(請從呼叫執行程式到結束程式完整的把操作對話複製到下框)
 
 ```log
-
+=== 圖書管理系統 v1.0 (Modernized) ===
+> add 深入淺出Python/978001/available
+Success
+> add 資料結構理論/978002/available
+Success
+> add 演算法實作/978003/available
+Success
+> add 重複測試書/978001/available
+ISBN Exist
+> borrow 978002
+Updated
+> show
+書名: 深入淺出Python, ISBN: 978001, 狀態: available
+書名: 資料結構理論, ISBN: 978002, 狀態: borrowed
+書名: 演算法實作, ISBN: 978003, 狀態: available
+> exit
+系統關閉
 ```
 
 ### 3.2 產出的資料檔案格式
@@ -85,11 +117,21 @@ Prompt C：
 
 ```json
 [
-  {
-    "title": "XXX",
-    "isbn": "XXX",
-    "status": "XXX"
-  }
+    {
+        "title": "深入淺出Python",
+        "isbn": "978001",
+        "status": "available"
+    },
+    {
+        "title": "資料結構理論",
+        "isbn": "978002",
+        "status": "borrowed"
+    },
+    {
+        "title": "演算法實作",
+        "isbn": "978003",
+        "status": "available"
+    }
 ]
 ```
 
