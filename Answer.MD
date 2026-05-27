@@ -143,7 +143,9 @@ Updated
 
 
 ```log
-# 請在此處貼上 git log 內容
+98081c1 (HEAD -> main) add modern_library.py
+19c59bf change variable name
+f3ca36a first commit
 ```
 
 ### 4.2. GitHub Repository 連結(此小題7分)
