@@ -48,13 +48,12 @@ Prompt A：
 2. 使用 GitHub Copilot Chat 功能分析程式碼。
 3. 在 `Answer.MD` 中完成「變數與邏輯對照表」，找出神祕變數 `l1`, `d2`, `c_res` 的真實意義。
 4. 診斷出 **5 個以上** 的「代碼壞味道 (Code Smells)」，並說明為何這些設計會造成維護困難。
-請以以下格式回答並且修改legacy_lib.py
+請以以下格式回答並且依照legacy_lib.py建立modern_library.py存放更改好的代碼
 | 原始變數名稱 | 代表意義 (Business Logic) | 建議修正名稱 |
 |---|---|---|
 
 Prompt B： 
 1. 目標： 撰寫 `modern_library.py`。
-
     - 模組化： 將功能拆解為類別 (Class) 或多個函式 (Function)。
     - 格式升級： 捨棄原本的 `txt` 混亂分割格式，改用標準 `json` 格式儲存。
     - 強健性： 增加對使用者輸入與檔案讀取的錯誤處理 (Try-Except)。
